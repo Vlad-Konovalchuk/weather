@@ -6,8 +6,13 @@ import {Weather} from "./components/Weather/Weather";
 import axios from "axios";
 
 class App extends Component {
-    static state = {
-        weather: {}
+    state = {
+        temperature: null,
+        city: null,
+        country: null,
+        humidity: null,
+        description: null,
+        error: "Please enter the values."
     };
 
 
@@ -17,8 +22,21 @@ class App extends Component {
         const country = e.target.elements.country.value;
         try {
             const key = process.env.REACT_APP_SECRET_CODE;
-            const data = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${city},${country}&appid=a5e00b549adfff86f5bd7ad0da79bbae&units=metric`)
-            return this.setState({weather: data.data});
+            const data = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${city},${country}&appid=${key}&units=metric`);
+            if (city && country) {
+                this.setState({
+                    temperature: data.data.main.temp,
+                    city: data.data.name,
+                    country: data.data.sys.country,
+                    humidity: data.data.main.humidity,
+                    description: data.data.weather[0].description,
+                    error: ""
+                });
+            } else {
+                this.setState({
+                    error: "Please enter the values."
+                });
+            }
         } catch (e) {
             throw new Error(e.message)
         } finally {
@@ -28,11 +46,29 @@ class App extends Component {
 
 
     render() {
+        const {temperature, humidity, city, country, description, error} = this.state;
         return (
-            <div className="App">
-                <Title/>
-                <Form getWeather={this.getWeather}/>
-                <Weather/>
+            <div>
+                <div className="wrapper">
+                    <div className="container">
+                        <div className="row">
+                            <div className="col title-container">
+                                <Title/>
+                            </div>
+                            <div className="col form-container">
+                                <Form getWeather={this.getWeather}/>
+                                <Weather
+                                    temperature={temperature}
+                                    humidity={humidity}
+                                    city={city}
+                                    country={country}
+                                    description={description}
+                                    error={error}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }
