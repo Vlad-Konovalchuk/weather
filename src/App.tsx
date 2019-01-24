@@ -37,6 +37,7 @@ class App extends Component<{}, IAppState> {
   };
 
   public handleSubmit = (e: React.ChangeEvent<HTMLFormElement>): void => {
+    e.preventDefault();
     const city = (e.currentTarget.elements.namedItem(
       'city',
     ) as HTMLInputElement).value;
@@ -44,9 +45,12 @@ class App extends Component<{}, IAppState> {
       'country',
     ) as HTMLInputElement).value;
     if (city && country) {
-      this.setState({
-        location: { city, country },
-      });
+      this.setState(
+        {
+          location: { city, country },
+        },
+        () => this.setWeather(),
+      );
     } else {
       this.setError('Please enter the values.');
     }
@@ -85,26 +89,33 @@ class App extends Component<{}, IAppState> {
       </div>
     );
   }
+
   private setError = (er: string): void => {
     this.setState({
       error: [...this.state.error, er],
     });
   };
 
-  private setEnvVariables = (): string | undefined => {
-    if (process.env.REACT_APP_SECRET_CODE) {
+  private setEnvVariables = () => {
+    if (process.env.REACT_APP_SECRET_CODE !== undefined) {
       return process.env.REACT_APP_SECRET_CODE;
     }
-    {
-      this.setError("You haven't API key, but it require");
-    }
+    this.setError("You haven't API key, but it require");
   };
 
-  private fetchWeather = async () => {
+  private setWeather = async () => {
     const key = this.setEnvVariables();
     const location = this.state.location;
     const { error } = this.state;
-    if (error.length === 0) {
+    if (error.length === 0 && key !== undefined) {
+      const data = await this.getWeather(location, key);
+      this.setState({
+        temperature: data.data.main.temp,
+        city: data.data.name,
+        country: data.data.sys.country,
+        humidity: data.data.main.humidity,
+        description: data.data.weather[0].description,
+      });
     } else {
       return;
     }
@@ -115,23 +126,16 @@ class App extends Component<{}, IAppState> {
       loading: true,
     });
     try {
-      const data = await axios.get(
+      return await axios.get(
         `https://api.openweathermap.org/data/2.5/weather?q=${location.city},${
           location.country
         }&appid=${key}&units=metric`,
       );
-      this.setState({
-        temperature: data.data.main.temp,
-        city: data.data.sys.city,
-        country: data.data.sys.country,
-        humidity: data.data.main.humidity,
-        description: data.data.weather[0].description,
-      });
     } catch (error) {
-      // throw new Error(e.message);
-      this.setState({
-        error: error.message,
-      });
+      throw new Error(error.message);
+      /* this.setState({
+         error: error.message,
+       });*/
     } finally {
       this.setState({
         loading: false,
